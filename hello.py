@@ -9,7 +9,7 @@ app = Flask(__name__)
 @app.route('/')
 def index():
     list_of_items = ["abc", "defg", 15, 4.3]
-    return render_template('test.jinja',
+    return render_template('index.jinja',
         list_of_items = list_of_items)
 
 
