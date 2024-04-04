@@ -1,0 +1,24 @@
+<h1>Hello From the Terminal!</h1>
+
+<h2>TEST 2 3</h2>
+
+<p> This is my first webpage</p>
+
+<h3>Favorite things: </h3>
+{{ list_of_items }}
+
+<hr>
+
+<h3>Favorite things: </h3>
+{% for item in list_of_items %}
+{% if item == 15 %}
+{{ item + 100 }}
+{% else %}
+{{ item }}
+{% endif %}
+{% endfor %}
+
+<h4>
+    First Item:
+    {{ list_of_items.0 }}
+</h4>
