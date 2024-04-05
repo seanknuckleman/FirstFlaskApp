@@ -3,12 +3,11 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField
 from wtforms.validators import DataRequired
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
-# import os
+from sqlalchemy.sql import func
+# from datetime import datetime
 
 # Create a Flask Instance
 app = Flask(__name__)
-
 
 # Secret Key - Used For Data Validation
 app.config['SECRET_KEY'] = "dev"
@@ -16,34 +15,38 @@ app.config['SECRET_KEY'] = "dev"
 # if not app.config['SECRET_KEY']:
 #   raise  EnvironmentError("Missing SECRET_KEY environment variable")
 
-# Add Database
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+# Add Database (sqlite) (Save as a txt file)
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+# Add Database (MySQL)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:@localhost/demo_flask'
+
+
 # Initialize Database
 db = SQLAlchemy(app)
 
 # STEPS FOR CREATING A DB
-# Open Bash Terminal
-# $ winpty python
-# >> from [project_name] import app, db
-# >> app.app_context().push()
-# >> db.create_all()
-# >> exit()
+# 1 - Open Bash Terminal
+# 2 - $ winpty python
+# 3 - >> from [project_name] import app, db
+# 4 - >> app.app_context().push()
+# 5 - >> db.create_all()
+# 6 - >> exit()
 
-# Create Model
+# Create a Model
 class Users(db.Model):
     with app.app_context():
         db.create_all()
 
-    # RUN IN TERMINAL: from app import   app from app import db
+    # Database Data 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), nullable=False, unique=True)
-    date_added = db.Column(db.DateTime(timezone=True), default=datetime.utcnow)
+    date_added = db.Column(db.DateTime(timezone=True), server_default=func.now())
+    # date_added = db.Column(db.DateTime(timezone=True), default=datetime.utcnow)
 
-    # Create A String
+    # Create A String Repersentaion of the Object
     def __repr__(self):
         return '<Name %>' % self.name
-
 
 # Create a Form Class
 class UserForm(FlaskForm):
@@ -51,12 +54,10 @@ class UserForm(FlaskForm):
     email = StringField("Email", validators=[DataRequired()])
     submit = SubmitField("Submit")
 
-
 # Create a Form Class
 class NamerForm(FlaskForm):
     name = StringField("What's Your Name", validators=[DataRequired()])
     submit = SubmitField("Submit")
-
 
 
 # Routes/Decorators
@@ -108,9 +109,7 @@ def add_user():
         form=form,
         name=name,
         our_users=our_users
-
     )
-
 
 
 # Create Custom Error Pages
@@ -124,7 +123,6 @@ def page_not_found(e):
 @app.errorhandler(500)
 def page_not_found(e):
     return render_template('500.html'), 500
-
 
 
 # Run App In Debug Mode If Loaded Succssfully
