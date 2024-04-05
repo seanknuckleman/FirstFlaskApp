@@ -1,10 +1,9 @@
-from flask import Flask, render_template, flash
+from flask import Flask, render_template, flash, request
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField
 from wtforms.validators import DataRequired
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.sql import func
-# from datetime import datetime
 
 # Create a Flask Instance
 app = Flask(__name__)
@@ -17,9 +16,9 @@ app.config['SECRET_KEY'] = "dev"
 
 # Add Database (sqlite) (Save as a txt file)
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+
 # Add Database (MySQL)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:@localhost/demo_flask'
-
 
 # Initialize Database
 db = SQLAlchemy(app)
@@ -32,6 +31,8 @@ db = SQLAlchemy(app)
 # 5 - >> db.create_all()
 # 6 - >> exit()
 
+# --- Models ---
+
 # Create a Model
 class Users(db.Model):
     with app.app_context():
@@ -42,11 +43,13 @@ class Users(db.Model):
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), nullable=False, unique=True)
     date_added = db.Column(db.DateTime(timezone=True), server_default=func.now())
-    # date_added = db.Column(db.DateTime(timezone=True), default=datetime.utcnow)
 
     # Create A String Repersentaion of the Object
     def __repr__(self):
         return '<Name %>' % self.name
+
+
+# --- Classes ---
 
 # Create a Form Class
 class UserForm(FlaskForm):
@@ -60,7 +63,7 @@ class NamerForm(FlaskForm):
     submit = SubmitField("Submit")
 
 
-# Routes/Decorators
+# --- Routes/Decorators ---
 
 # Create Default Route / Home Page (localhost:5000)
 @app.route('/') 
@@ -83,11 +86,8 @@ def name():
         name = form.name.data
         form.name.data = ''
         flash("Form Submitted Successfully!")
-    return render_template(
-        'name.html',
-        name = name,
-        form = form
-    )
+    return render_template('name.html',
+        name=name, form=form)
 
 # Create Add User Page (localhost:5000/name)
 @app.route('/user/add', methods=['GET', 'POST'])
@@ -106,13 +106,31 @@ def add_user():
         flash("User Added Successfully!")
     our_users = Users.query.order_by(Users.date_added)
     return render_template('add_user.html',
-        form=form,
-        name=name,
-        our_users=our_users
-    )
+        form=form, name=name, our_users=our_users)
+
+# Update Users Database Record
+@app.route('/update/<int:id>', methods=['GET', 'POST'])
+def update(id):
+    form = UserForm()
+    name_to_update = Users.query.get_or_404(id)
+    if request.method == "POST":
+        name_to_update.name = request.form['name']
+        name_to_update.email = request.form['email']
+        try:
+            db.session.commit()
+            flash("User Updated Successfully!")
+            return render_template('update.html',
+                form=form, name_to_update=name_to_update)
+        except: 
+            flash("ERROR!! Looks Like Something Went Wrong... Try Again!")
+            return render_template('update.html', 
+                form=form, name_to_update=name_to_update)
+    else:
+        return render_template('update.html',
+            form=form, name_to_update=name_to_update)
 
 
-# Create Custom Error Pages
+# --- Custom Error Pages ---
 
 # Invalid URL
 @app.errorhandler(404)
@@ -124,6 +142,7 @@ def page_not_found(e):
 def page_not_found(e):
     return render_template('500.html'), 500
 
+# --- Run App ---
 
 # Run App In Debug Mode If Loaded Succssfully
 if __name__ == "__main__":
