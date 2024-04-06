@@ -69,65 +69,184 @@ class NamerForm(FlaskForm):
 @app.route('/') 
 def index():
     list_of_items = ["abc", "defg", 15, 4.3]
-    return render_template('index.jinja',
-        list_of_items = list_of_items)
+    return render_template(
+        'index.jinja',
+        list_of_items = list_of_items
+    )
+
 
 # Create User Profile Page (localhost:5000/user/...)
 @app.route('/user/<name>')
 def user(name):
-    return render_template('user.html', user_name=name)
+    # render_template Variables DONT HAVE TO BE THE SAME
+    return render_template(
+        'user.html',
+        user_name = name    # CONVENTION IS TO NAME SAME (name = name)
+    )
+
 
 # Create Name Page (localhost:5000/name)
 @app.route('/name', methods=['GET', 'POST'])
 def name():
-    name = None
-    form = NamerForm()
+    # -- Local Variables --
+    name = None         # Save User's Name
+    form = UserForm()   # Save User-Template Form
+    
+    # IF Valid Submission - Save User
     if form.validate_on_submit():
+        # Save Name For Website Display Purposes
         name = form.name.data
+
+        # Empty Out Form For Next Use
         form.name.data = ''
+
+        # Display Success Alert 
         flash("Form Submitted Successfully!")
-    return render_template('name.html',
-        name=name, form=form)
+    
+    return render_template(
+        'name.html',
+        name = name,
+        form = form
+    )
+
 
 # Create Add User Page (localhost:5000/name)
 @app.route('/user/add', methods=['GET', 'POST'])
 def add_user():
-    name = None
-    form = UserForm()
+    # -- Local Variables --
+    name = None         # Save User's Name
+    form = UserForm()   # Save User-Template Form
+
+    # IF Valid Submission - Add User To DataBase
     if form.validate_on_submit():
+        # Variable Checks if User's Email is Unique or User Doesn't Exist
         user = Users.query.filter_by(email=form.email.data).first()
+
+        # Email Doesn't Exist yet (New User)
         if user is None:
+            # Create New User Object
             user = Users(name=form.name.data, email=form.email.data)
+
+            # Add User to DataBase
             db.session.add(user)
             db.session.commit()
+        
+        # Save Name From DataBase For Website Display Purposes
         name = form.name.data
+
+        # Empty Out Form For Next Use
         form.name.data = ''
         form.email.data = ''
+        
+        # Display Success Alert 
         flash("User Added Successfully!")
+    
+    # Retrive DataBase Data
     our_users = Users.query.order_by(Users.date_added)
-    return render_template('add_user.html',
-        form=form, name=name, our_users=our_users)
+
+    return render_template(
+        'add_user.html',
+        form = form,
+        name = name,
+        our_users = our_users
+    )
+
 
 # Update Users Database Record
 @app.route('/update/<int:id>', methods=['GET', 'POST'])
 def update(id):
-    form = UserForm()
-    name_to_update = Users.query.get_or_404(id)
+    # Retrieve Record With ID - If Doesn't Exist: Display Error 404 Page
+    user_to_update = Users.query.get_or_404(id)
+
+    # Save ID to the 'user_to_update' Object - (Used For Deletion)
+    user_to_update.id = id
+
+    # -- Local Variables --
+    form = UserForm()   # Save User-Template Form 
+
+    # IF Method == ["POST"]  
     if request.method == "POST":
-        name_to_update.name = request.form['name']
-        name_to_update.email = request.form['email']
+        
+        # Save Records to 'user_to_update' Object from Respective Form Fields 
+        user_to_update.name = request.form['name']
+        user_to_update.email = request.form['email']
+        
+        # Try Saving Updated Record
         try:
+            # Save Change To DataBase
             db.session.commit()
+            
+            # Display Success Alert 
             flash("User Updated Successfully!")
-            return render_template('update.html',
-                form=form, name_to_update=name_to_update)
+            
+            return render_template(
+                'update.html',
+                form = form,
+                user_to_update = user_to_update
+            )
+        
         except: 
+            # Display Error Alert 
             flash("ERROR!! Looks Like Something Went Wrong... Try Again!")
-            return render_template('update.html', 
-                form=form, name_to_update=name_to_update)
+           
+            return render_template(
+                'update.html',
+                form = form,
+                user_to_update = user_to_update
+            )
+        
+    # Method == ["GET"]
     else:
-        return render_template('update.html',
-            form=form, name_to_update=name_to_update)
+        return render_template(
+            'update.html',
+            form = form,
+            user_to_update = user_to_update
+        )
+
+
+# Delete Users Database Record
+@app.route('/delete/<int:id>', methods=['GET', 'POST'])
+def delete(id):
+    # Retrieve Record With ID - If Doesn't Exist: Display Error 404 Page
+    user_to_delete = Users.query.get_or_404(id)
+    
+    # -- Local Variables --
+    name = None         # Save User's Name
+    form = UserForm()   # Save User-Template Form
+
+    # Try Deleting Chosen Record
+    try:
+        # Delete the Record and Commit the Change
+        db.session.delete(user_to_delete)
+        db.session.commit()
+
+        # Display Success Alert 
+        flash("User Deleted Successfully!")
+
+        # Retrive and Save Updated DataBase In 'our_users'
+        our_users = Users.query.order_by(Users.date_added)
+
+        return render_template(
+            'add_user.html',
+            form = form, 
+            name = name, 
+            our_users = our_users
+        )
+    
+    except:
+        # Print Out Error Message
+        print("Whoops! There was a problem deleteing user, try again!")
+
+        # Retrive DataBase Data
+        our_users = Users.query.order_by(Users.date_added)
+
+        return render_template(
+            'add_user.html',
+            form = form, 
+            name = name, 
+            our_users = our_users
+        )
+
 
 
 # --- Custom Error Pages ---
@@ -137,10 +256,12 @@ def update(id):
 def page_not_found(e):
     return render_template('404.html'), 404
 
+
 # Internal Server Error
 @app.errorhandler(500)
 def page_not_found(e):
     return render_template('500.html'), 500
+
 
 # --- Run App ---
 
